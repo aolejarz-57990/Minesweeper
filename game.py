@@ -1,5 +1,7 @@
 import pygame
-from settings import CELL_SIZE, MAP_WIDTH, MAP_HEIGHT, ROWS, COLS, WHITE, BLACK, GRAY
+from settings import MINES_COUNT, CELL_SIZE, MAP_WIDTH, MAP_HEIGHT, ROWS, COLS, WHITE, BLACK, GRAY
+from cell import Cell
+import random
 
 
 class Game:
@@ -10,7 +12,9 @@ class Game:
         pygame.display.set_caption("Minesweeper")
 
         self.running = True
-        self.revealed = self.create_revealed_map()
+        self.game_over = False
+        self.board = self.create_board()
+        self.pleace_mines()
 
     def draw_map(self):
         #rysuje pola
@@ -19,7 +23,7 @@ class Game:
                 x = col * CELL_SIZE
                 y = row * CELL_SIZE
 
-                if self.revealed[row][col]:
+                if self.board[row][col].is_revealed:
                     pygame.draw.rect(
                         self.screen,
                         WHITE,
@@ -47,8 +51,10 @@ class Game:
         col = x // CELL_SIZE
         row = y // CELL_SIZE
 
-        self.revealed[row][col] = True
+        self.board[row][col].is_revealed = True
+
         print(row, col)
+        print(self.board[row][col].has_mine)
 
     def run(self):
         while self.running:
@@ -67,17 +73,34 @@ class Game:
 
         pygame.quit()
 
-    #buduje plansze z wartosciami False
-    def create_revealed_map(self):
-        revealed = []
+    #buduje plansze z obiektami Cell, o wlasciowsciach egz. 
+    def create_board(self):
+        board = []
 
-        #tworze plansze dla zmiennej revealed, jaki jest stan pola w pamieci gry
+        #tworze plansze dla zmiennej board, gdzie w kazdej komorce znajduje sie Cell
+        #np. self.board[row][col].has_mine = True, self.board[row][col].has_flag = True, osv. 
+
         for row in range(ROWS):
             row_list = []
 
             for col in range(COLS):
-                row_list.append(False)
+                row_list.append(Cell())
 
-            revealed.append(row_list)
+            board.append(row_list)
 
-        return revealed
+        return board
+    
+    def pleace_mines(self):
+        mines_pleaced = 0
+
+        #wybieranie losowego pola, kiedy liczba min jest mniejsza od 40
+        while mines_pleaced < MINES_COUNT:
+            row = random.randint(0, ROWS - 1)
+            col = random.randint(0, COLS - 1)
+
+        #jeśli pole jest puste, dodaje mine i zapisuje ilość min w liście
+        if not self.board[row][col].has_mine:
+            self.board[row][col].has_mine = True
+            mines_pleaced += 1
+        
+    
