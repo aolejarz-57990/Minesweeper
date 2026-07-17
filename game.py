@@ -51,8 +51,10 @@ class Game:
                 if clicked_cell.has_mine:
                     self.game_over = True
                     self.reveal_all_mines()
+                    pygame.display.set_caption("PRZEGRANA :( Wciśnij 'R', aby zresetować.")
                 else:
                     self.reveal_empty_cells(row, col)
+                    self.check_win()
 
     def reveal_all_mines(self):
         for row in range(ROWS):
@@ -61,6 +63,9 @@ class Game:
                     self.board[row][col].is_revealed = True
 
     def run(self):
+        #zeby sprawdzic liczbe kafelkow
+        self.check_win()
+
         while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -71,6 +76,10 @@ class Game:
                 #który przycisk myszy (1 - lewy, 2 czy 3- prawy) został kliknięty
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     self.handle_mouse_click(event.button)
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_r:
+                        self.reset_game()
 
             self.screen.fill(WHITE)
             self.draw_map()
@@ -162,12 +171,22 @@ class Game:
         
         for row in range(ROWS):
             for col in range(COLS):
-                if self.board[row][col].is_revealed:
+                if self.board[row][col].is_revealed and not self.board[row][col].has_mine:
                     revealed_count += 1
-        
-        #bo wygrywa się jak się odryje wszystkie "bezpieczne pola"
+                    
         safe_cells = (ROWS * COLS) - MINES_COUNT
+        remaining = safe_cells - revealed_count # Obliczamy ile zostało
         
-        if revealed_count == safe_cells:
+        if remaining == 0:
             self.game_over = True
-            pygame.display.set_caption("Minesweeper - WYGRANA!!!")
+            pygame.display.set_caption("WYGRANA! Wciśnij 'R', aby zagrać ponownie.")
+        else:
+            pygame.display.set_caption(f"Minesweeper | Pozostało do odkrycia: {remaining}")
+
+
+    def reset_game(self):
+        self.game_over = False
+        self.board = self.create_board()
+        self.place_mines()
+        self.count_neighbor_mines()
+        self.check_win()
