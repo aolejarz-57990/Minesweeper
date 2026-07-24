@@ -12,10 +12,7 @@ class Game:
         pygame.display.set_caption("Minesweeper")
 
         self.running = True
-        self.game_over = False
-        self.board = self.create_board()
-        self.place_mines()
-        self.count_neighbor_mines()
+        self.init_game()
 
     def draw_map(self):
         #rysuje pola
@@ -41,9 +38,9 @@ class Game:
         clicked_cell = self.board[row][col]
 
         if button == 3:
-                if not clicked_cell.is_revealed:
-                    #Jeśli była False, staje się True. Jeśli była True, staje się False.
-                    clicked_cell.has_flag = not clicked_cell.has_flag
+            if not clicked_cell.is_revealed:
+                #Jeśli była False, staje się True. Jeśli była True, staje się False.
+                clicked_cell.has_flag = not clicked_cell.has_flag
 
         elif button == 1:
             # Blokuje możliwość odkrycia pola, jeśli jest na nim flaga
@@ -63,8 +60,6 @@ class Game:
                     self.board[row][col].is_revealed = True
 
     def run(self):
-        #zeby sprawdzic liczbe kafelkow
-        self.check_win()
 
         while self.running:
             for event in pygame.event.get():
@@ -79,7 +74,7 @@ class Game:
 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r:
-                        self.reset_game()
+                        self.init_game()
 
             self.screen.fill(WHITE)
             self.draw_map()
@@ -145,16 +140,17 @@ class Game:
 
     
     def reveal_empty_cells(self, row, col):
-        clicked_cell = self.board[row][col]
+        cell = self.board[row][col]
 
         #jeśli pole jest odkryte lub ma flage - przerwanie 
-        if clicked_cell.is_revealed or clicked_cell.has_flag:
+        if cell.is_revealed or cell.has_flag:
             return
         
-        clicked_cell.is_revealed = True
+        cell.is_revealed = True
+        self.remaining -= 1
 
         #jeśli komórka sąsiaduje z miną(ma cyferke), fala ma się zatrzymać
-        if clicked_cell.neighbor_mines > 0:
+        if cell.neighbor_mines > 0:
             return
         
         for row_offset in [-1, 0, 1]:
@@ -167,26 +163,19 @@ class Game:
 
 
     def check_win(self):
-        revealed_count = 0
-        
-        for row in range(ROWS):
-            for col in range(COLS):
-                if self.board[row][col].is_revealed and not self.board[row][col].has_mine:
-                    revealed_count += 1
-                    
-        safe_cells = (ROWS * COLS) - MINES_COUNT
-        remaining = safe_cells - revealed_count # Obliczamy ile zostało
-        
-        if remaining == 0:
+        if self.remaining == 0:
             self.game_over = True
             pygame.display.set_caption("WYGRANA! Wciśnij 'R', aby zagrać ponownie.")
         else:
-            pygame.display.set_caption(f"Minesweeper | Pozostało do odkrycia: {remaining}")
+            self.display_remmaning_cells()
 
-
-    def reset_game(self):
+    def init_game(self):
         self.game_over = False
         self.board = self.create_board()
         self.place_mines()
         self.count_neighbor_mines()
-        self.check_win()
+        self.remaining = ROWS * COLS - MINES_COUNT
+        self.display_remmaning_cells()
+
+    def display_remmaning_cells(self):
+        pygame.display.set_caption(f"Minesweeper | Pozostało do odkrycia: {self.remaining}")

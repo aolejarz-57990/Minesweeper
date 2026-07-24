@@ -1,5 +1,5 @@
-ROWS = 20
-COLS = 20
+ROWS = 10
+COLS = 10
 
 CELL_SIZE = 40
 
@@ -28,4 +28,4 @@ NUMBER_COLORS = {
     8: BLACK
 }
 
-MINES_COUNT = 40
+MINES_COUNT = 5
