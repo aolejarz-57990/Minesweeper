@@ -1,8 +1,9 @@
 import pygame
-from settings import MINES_COUNT, CELL_SIZE, MAP_WIDTH, MAP_HEIGHT, ROWS, COLS, WHITE, BLACK, GRAY
-from cell import Cell
-import random
+from settings import CELL_SIZE, MAP_WIDTH, MAP_HEIGHT, ROWS, COLS, WHITE, BLACK, GRAY, NUMBER_COLORS, RED
+from minesweeper import Minesweeper
 
+pygame.font.init()
+FONT = pygame.font.SysFont('arial', 24, bold=True)
 
 class Game:
     def __init__(self):
@@ -12,7 +13,8 @@ class Game:
         pygame.display.set_caption("Minesweeper")
 
         self.running = True
-        self.init_game()
+
+        self.minesweeper = Minesweeper()
 
     def draw_map(self):
         #rysuje pola
@@ -20,11 +22,73 @@ class Game:
             for col in range(COLS):
                 x = col * CELL_SIZE
                 y = row * CELL_SIZE
-                self.board[row][col].draw(self.screen, x, y)
-        
+                self.draw_cell(self.screen, x, y, self.minesweeper.board[row][col])
 
+    def draw_cell(self, screen, x, y, cell):
+        # Obliczamy środek kratki (przyda się do równego rysowania kółek i tekstu)
+        center_x = x + CELL_SIZE // 2
+        center_y = y + CELL_SIZE // 2
+
+        if cell.is_revealed:
+            pygame.draw.rect(
+                screen,
+                WHITE,
+                (x, y, CELL_SIZE, CELL_SIZE)
+            )
+
+            #1 to grubość ramki
+            pygame.draw.rect(
+                screen,
+                GRAY, 
+                (x, y, CELL_SIZE, CELL_SIZE), 1
+            )
+
+            if cell.has_mine:
+                pygame.draw.circle(
+                screen,
+                BLACK, 
+                #promień koła
+                (center_x, center_y), CELL_SIZE // 4
+                )
+                
+
+            elif cell.neighbor_mines > 0:
+                #black jest zabezpieczeniem przy get
+                text_color = NUMBER_COLORS.get(cell.neighbor_mines, BLACK)
+                
+                #funckja render przyjmuje tylko i wyłącznie str, wygladzenie krawędzi, kolor
+                text_surface = FONT.render(str(cell.neighbor_mines), True, text_color)
+                
+                #gdzie bedzie teskt, bierze srodek ramki i umieszcza ja w cx i xy
+                text_rect = text_surface.get_rect(center=(center_x, center_y))
+                
+                #nakładanie grafiki na "płótno"(co , na co)
+                screen.blit(text_surface, text_rect)
+        else:
+            # szare tło dla zakrytego pola
+            pygame.draw.rect(
+                screen,
+                GRAY,
+                (x, y, CELL_SIZE, CELL_SIZE)
+                )
+            
+            #  czarną ramkę
+            pygame.draw.rect(
+                screen,
+                BLACK,
+                (x, y, CELL_SIZE, CELL_SIZE), 1
+                )
+
+            if cell.has_flag:
+                # Jeśli gracz postawił flagę, rysujemy małe czerwone kółko 
+                pygame.draw.circle(
+                    screen,
+                    RED,
+                    (center_x, center_y), CELL_SIZE // 6
+                    )
+    
     def handle_mouse_click(self, button):
-        if self.game_over:
+        if self.minesweeper.game_over:
             return
         
         #funckja pygame, która sprawdza aktualną pozycję myszki, zwraca x,y
@@ -34,30 +98,12 @@ class Game:
         col = x // CELL_SIZE
         row = y // CELL_SIZE
 
-        # Dla wygody tworzyę zmienną "clicked_cell", która odnosi się do klikniętego pola
-        clicked_cell = self.board[row][col]
-
         if button == 3:
-            if not clicked_cell.is_revealed:
-                #Jeśli była False, staje się True. Jeśli była True, staje się False.
-                clicked_cell.has_flag = not clicked_cell.has_flag
+            self.minesweeper.flag_cell(row, col)
 
         elif button == 1:
-            # Blokuje możliwość odkrycia pola, jeśli jest na nim flaga
-            if not clicked_cell.has_flag and not clicked_cell.is_revealed:
-                if clicked_cell.has_mine:
-                    self.game_over = True
-                    self.reveal_all_mines()
-                    pygame.display.set_caption("PRZEGRANA :( Wciśnij 'R', aby zresetować.")
-                else:
-                    self.reveal_empty_cells(row, col)
-                    self.check_win()
+            self.minesweeper.reveal_cell(row, col)
 
-    def reveal_all_mines(self):
-        for row in range(ROWS):
-            for col in range(COLS):
-                if self.board[row][col].has_mine:
-                    self.board[row][col].is_revealed = True
 
     def run(self):
 
@@ -74,108 +120,19 @@ class Game:
 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r:
-                        self.init_game()
+                        self.minesweeper.init_game()
+
+            if self.minesweeper.game_over:
+                if self.minesweeper.game_won:
+                    pygame.display.set_caption("WYGRANA! Wciśnij 'R', aby zagrać ponownie.")
+                else:
+                    pygame.display.set_caption("PRZEGRANA :( Wciśnij 'R', aby zresetować.")
+            else:
+                pygame.display.set_caption(f"Minesweeper | Pozostało do odkrycia: {self.minesweeper.remaining}")
+
 
             self.screen.fill(WHITE)
             self.draw_map()
             pygame.display.update()
 
         pygame.quit()
-
-    #buduje plansze z obiektami Cell, o wlasciowsciach egz. 
-    def create_board(self):
-        board = []
-
-        #tworze plansze dla zmiennej board, gdzie w kazdej komorce znajduje sie Cell
-        #np. self.board[row][col].has_mine = True, self.board[row][col].has_flag = True, osv. 
-
-        for row in range(ROWS):
-            row_list = []
-
-            for col in range(COLS):
-                row_list.append(Cell())
-
-            board.append(row_list)
-
-        return board
-    
-    def place_mines(self):
-        mines_placed = 0
-
-        #wybieranie losowego pola, kiedy liczba min jest mniejsza od 40
-        while mines_placed < MINES_COUNT:
-            row = random.randint(0, ROWS - 1)
-            col = random.randint(0, COLS - 1)
-
-            #jeśli pole jest puste, dodaje mine i zapisuje ilość min w liście
-            if not self.board[row][col].has_mine:
-                self.board[row][col].has_mine = True
-                mines_placed += 1
-
-
-    def _assign_neighboring_mines_count(self, row, col):
-        mines_count = 0
-
-        #offsett- przesuniecie
-        for row_offset in [-1, 0, 1]:
-            for col_offset in [-1, 0, 1]:
-                neighbor_row = row + row_offset
-                neighbor_col = col + col_offset
-
-                if (
-                    0 <= neighbor_row < ROWS
-                    and 0 <= neighbor_col < COLS
-                    and self.board[neighbor_row][neighbor_col].has_mine
-                ):
-                    mines_count += 1
-
-        self.board[row][col].neighbor_mines = mines_count
-
-
-    def count_neighbor_mines(self):
-        for row in range(ROWS):
-            for col in range(COLS):
-                if not self.board[row][col].has_mine:
-                    self._assign_neighboring_mines_count(row, col)
-
-    
-    def reveal_empty_cells(self, row, col):
-        cell = self.board[row][col]
-
-        #jeśli pole jest odkryte lub ma flage - przerwanie 
-        if cell.is_revealed or cell.has_flag:
-            return
-        
-        cell.is_revealed = True
-        self.remaining -= 1
-
-        #jeśli komórka sąsiaduje z miną(ma cyferke), fala ma się zatrzymać
-        if cell.neighbor_mines > 0:
-            return
-        
-        for row_offset in [-1, 0, 1]:
-            for col_offset in [-1, 0, 1]:
-                neighbor_row = row + row_offset
-                neighbor_col = col + col_offset
-
-                if 0 <= neighbor_row < ROWS and 0 <= neighbor_col < COLS:
-                    self.reveal_empty_cells(neighbor_row, neighbor_col)
-
-
-    def check_win(self):
-        if self.remaining == 0:
-            self.game_over = True
-            pygame.display.set_caption("WYGRANA! Wciśnij 'R', aby zagrać ponownie.")
-        else:
-            self.display_remmaning_cells()
-
-    def init_game(self):
-        self.game_over = False
-        self.board = self.create_board()
-        self.place_mines()
-        self.count_neighbor_mines()
-        self.remaining = ROWS * COLS - MINES_COUNT
-        self.display_remmaning_cells()
-
-    def display_remmaning_cells(self):
-        pygame.display.set_caption(f"Minesweeper | Pozostało do odkrycia: {self.remaining}")
