@@ -59,68 +59,22 @@ class PygameUI(GraphicalInterface):
                 self.draw_cell(self.screen, x, y, self.minesweeper.board[row][col])
 
     def draw_cell(self, screen, x, y, cell):
-        # Obliczamy środek kratki (przyda się do równego rysowania kółek i tekstu)
         center_x = x + CELL_SIZE // 2
         center_y = y + CELL_SIZE // 2
 
         if cell.is_revealed:
-            pygame.draw.rect(
-                screen,
-                WHITE,
-                (x, y, CELL_SIZE, CELL_SIZE)
-            )
-
-            #1 to grubość ramki
-            pygame.draw.rect(
-                screen,
-                GRAY, 
-                (x, y, CELL_SIZE, CELL_SIZE), 1
-            )
+            self._draw_revealed_background(x, y)
 
             if cell.has_mine:
-                pygame.draw.circle(
-                screen,
-                BLACK, 
-                #promień koła
-                (center_x, center_y), CELL_SIZE // 4
-                )
+                self._draw_mine(center_x, center_y)
                 
-
             elif cell.neighbor_mines > 0:
-                #black jest zabezpieczeniem przy get
-                text_color = NUMBER_COLORS.get(cell.neighbor_mines, BLACK)
-                
-                #funckja render przyjmuje tylko i wyłącznie str, wygladzenie krawędzi, kolor
-                text_surface = FONT.render(str(cell.neighbor_mines), True, text_color)
-                
-                #gdzie bedzie teskt, bierze srodek ramki i umieszcza ja w cx i xy
-                text_rect = text_surface.get_rect(center=(center_x, center_y))
-                
-                #nakładanie grafiki na "płótno"(co , na co)
-                screen.blit(text_surface, text_rect)
+                self._draw_number(center_x, center_y, cell.neighbor_mines)
         else:
-            # szare tło dla zakrytego pola
-            pygame.draw.rect(
-                screen,
-                GRAY,
-                (x, y, CELL_SIZE, CELL_SIZE)
-                )
-            
-            #  czarną ramkę
-            pygame.draw.rect(
-                screen,
-                BLACK,
-                (x, y, CELL_SIZE, CELL_SIZE), 1
-                )
+            self._draw_hidden_background(x, y)
 
             if cell.has_flag:
-                # Jeśli gracz postawił flagę, rysujemy małe czerwone kółko 
-                pygame.draw.circle(
-                    screen,
-                    RED,
-                    (center_x, center_y), CELL_SIZE // 6
-                    )
-    
+                self._draw_flag(center_x, center_y)
 
     def update_display(self):
             
@@ -136,3 +90,24 @@ class PygameUI(GraphicalInterface):
 
     def close(self):
         pygame.quit()
+
+
+    def _draw_revealed_background(self, x, y):
+        pygame.draw.rect(self.screen, WHITE, (x, y, CELL_SIZE, CELL_SIZE))
+        pygame.draw.rect(self.screen, GRAY, (x, y, CELL_SIZE, CELL_SIZE), 1)
+
+    def _draw_hidden_background(self, x, y):
+        pygame.draw.rect(self.screen, GRAY, (x, y, CELL_SIZE, CELL_SIZE))
+        pygame.draw.rect(self.screen, BLACK, (x, y, CELL_SIZE, CELL_SIZE), 1)
+
+    def _draw_mine(self, center_x, center_y):
+        pygame.draw.circle(self.screen, BLACK, (center_x, center_y), CELL_SIZE // 4)
+
+    def _draw_flag(self, center_x, center_y):
+        pygame.draw.circle(self.screen, RED, (center_x, center_y), CELL_SIZE // 6)
+
+    def _draw_number(self, center_x, center_y, number):
+        text_color = NUMBER_COLORS.get(number, BLACK)
+        text_surface = FONT.render(str(number), True, text_color)
+        text_rect = text_surface.get_rect(center=(center_x, center_y))
+        self.screen.blit(text_surface, text_rect)

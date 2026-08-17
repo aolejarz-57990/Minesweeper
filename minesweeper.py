@@ -1,12 +1,6 @@
 from settings import ROWS, COLS, MINES_COUNT
+from cell import EmptyCell, MineCell
 from random import randint
-
-class Cell:
-    def __init__(self):
-        self.is_revealed = False
-        self.has_mine = False
-        self.has_flag = False
-        self.neighbor_mines = 0
 
 class Minesweeper:
     def __init__(self):
@@ -27,7 +21,7 @@ class Minesweeper:
             row_list = []
 
             for col in range(COLS):
-                row_list.append(Cell())
+                row_list.append(EmptyCell())
 
             board.append(row_list)
 
@@ -41,7 +35,7 @@ class Minesweeper:
             col = randint(0, COLS - 1)
 
             if not self.board[row][col].has_mine:
-                self.board[row][col].has_mine = True
+                self.board[row][col].has_mine = MineCell
                 mines_placed += 1
 
 
