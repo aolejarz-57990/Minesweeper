@@ -1,5 +1,5 @@
-from game import Game
+from pygame_ui import PygameUI
 
 if __name__ == "__main__":
-    game = Game()
+    game = PygameUI()
     game.run()

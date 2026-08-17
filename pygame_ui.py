@@ -1,23 +1,57 @@
 import pygame
+from graphical_interface import GraphicalInterface
 from settings import CELL_SIZE, MAP_WIDTH, MAP_HEIGHT, ROWS, COLS, WHITE, BLACK, GRAY, NUMBER_COLORS, RED
 from minesweeper import Minesweeper
 
 pygame.font.init()
 FONT = pygame.font.SysFont('arial', 24, bold=True)
 
-class Game:
+class PygameUI(GraphicalInterface):
     def __init__(self):
         pygame.init()
 
-        self.screen = pygame.display.set_mode((MAP_WIDTH, MAP_HEIGHT))
-        pygame.display.set_caption("Minesweeper")
+        super().__init__()
 
-        self.running = True
+        self.screen = pygame.display.set_mode(
+            (MAP_WIDTH, MAP_HEIGHT)
+        )
+
+        pygame.display.set_caption("Minesweeper")
 
         self.minesweeper = Minesweeper()
 
+    def get_events(self):
+        clicked_buttons = []
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                clicked_buttons.append(event.button)
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    self.minesweeper.init_game()
+
+        return clicked_buttons
+
+    def handle_mouse_click(self, button):
+        if self.minesweeper.game_over:
+            return
+        
+        x, y = pygame.mouse.get_pos()
+        col = x // CELL_SIZE
+        row = y // CELL_SIZE
+
+        if button == 3:
+            self.minesweeper.flag_cell(row, col)
+        elif button == 1:
+            self.minesweeper.reveal_cell(row, col)
+
     def draw_map(self):
-        #rysuje pola
+        self.screen.fill(WHITE)
+
         for row in range(ROWS):
             for col in range(COLS):
                 x = col * CELL_SIZE
@@ -87,41 +121,9 @@ class Game:
                     (center_x, center_y), CELL_SIZE // 6
                     )
     
-    def handle_mouse_click(self, button):
-        if self.minesweeper.game_over:
-            return
-        
-        #funckja pygame, która sprawdza aktualną pozycję myszki, zwraca x,y
-        x, y = pygame.mouse.get_pos()
 
-        #ile pikseli od lewej górnej strony okna, // dzielenie calkowite 
-        col = x // CELL_SIZE
-        row = y // CELL_SIZE
-
-        if button == 3:
-            self.minesweeper.flag_cell(row, col)
-
-        elif button == 1:
-            self.minesweeper.reveal_cell(row, col)
-
-
-    def run(self):
-
-        while self.running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-                
-                #To jest specjalna stała/event type w Pygame, która oznacza, 
-                # ze użytkownik nacisnął przycisk myszy
-                #który przycisk myszy (1 - lewy, 2 czy 3- prawy) został kliknięty
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    self.handle_mouse_click(event.button)
-
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_r:
-                        self.minesweeper.init_game()
-
+    def update_display(self):
+            
             if self.minesweeper.game_over:
                 if self.minesweeper.game_won:
                     pygame.display.set_caption("WYGRANA! Wciśnij 'R', aby zagrać ponownie.")
@@ -130,9 +132,7 @@ class Game:
             else:
                 pygame.display.set_caption(f"Minesweeper | Pozostało do odkrycia: {self.minesweeper.remaining}")
 
-
-            self.screen.fill(WHITE)
-            self.draw_map()
             pygame.display.update()
 
+    def close(self):
         pygame.quit()
