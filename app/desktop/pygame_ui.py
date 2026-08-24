@@ -1,7 +1,8 @@
 import pygame
-from graphical_interface import GraphicalInterface
-from settings import CELL_SIZE, MAP_WIDTH, MAP_HEIGHT, ROWS, COLS, WHITE, BLACK, GRAY, NUMBER_COLORS, RED
-from minesweeper import Minesweeper
+from app.desktop.graphical_interface import GraphicalInterface
+from app.minesweeper.cell import MineCell
+from app.settings import CELL_SIZE, MAP_WIDTH, MAP_HEIGHT, ROWS, COLS, WHITE, BLACK, GRAY, NUMBER_COLORS, RED
+from app.minesweeper.minesweeper import Minesweeper
 
 pygame.font.init()
 FONT = pygame.font.SysFont('arial', 24, bold=True)
@@ -65,7 +66,7 @@ class PygameUI(GraphicalInterface):
         if cell.is_revealed:
             self._draw_revealed_background(x, y)
 
-            if cell.has_mine:
+            if isinstance(cell, MineCell):
                 self._draw_mine(center_x, center_y)
                 
             elif cell.neighbor_mines > 0:
@@ -78,15 +79,15 @@ class PygameUI(GraphicalInterface):
 
     def update_display(self):
             
-            if self.minesweeper.game_over:
-                if self.minesweeper.game_won:
-                    pygame.display.set_caption("WYGRANA! Wciśnij 'R', aby zagrać ponownie.")
-                else:
-                    pygame.display.set_caption("PRZEGRANA :( Wciśnij 'R', aby zresetować.")
+        if self.minesweeper.game_over:
+            if self.minesweeper.game_won:
+                pygame.display.set_caption("WYGRANA! Wciśnij 'R', aby zagrać ponownie.")
             else:
-                pygame.display.set_caption(f"Minesweeper | Pozostało do odkrycia: {self.minesweeper.remaining}")
+                pygame.display.set_caption("PRZEGRANA :( Wciśnij 'R', aby zresetować.")
+        else:
+            pygame.display.set_caption(f"Minesweeper | Pozostało do odkrycia: {self.minesweeper.remaining}")
 
-            pygame.display.update()
+        pygame.display.update()
 
     def close(self):
         pygame.quit()

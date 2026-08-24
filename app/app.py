@@ -1,4 +1,4 @@
-from pygame_ui import PygameUI
+from app.desktop.pygame_ui import PygameUI
 
 if __name__ == "__main__":
     game = PygameUI()

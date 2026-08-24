@@ -8,12 +8,10 @@ class Cell(ABC):
 class EmptyCell(Cell):
     def __init__(self):
         super().__init__()
-        self.has_mine = False
         self.neighbor_mines = 0
 
 class MineCell(Cell):
     def __init__(self):
         super().__init__()
-        self.has_mine = True
-        self.neighbor_mines = 0
+        
 

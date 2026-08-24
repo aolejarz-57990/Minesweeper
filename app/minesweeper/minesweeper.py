@@ -1,5 +1,5 @@
-from settings import ROWS, COLS, MINES_COUNT
-from cell import EmptyCell, MineCell
+from app.settings import ROWS, COLS, MINES_COUNT
+from app.minesweeper.cell import EmptyCell, MineCell
 from random import randint
 
 class Minesweeper:
@@ -29,13 +29,13 @@ class Minesweeper:
     
     def _place_mines(self):
         mines_placed = 0
-
+        
         while mines_placed < MINES_COUNT:
             row = randint(0, ROWS - 1)
             col = randint(0, COLS - 1)
 
-            if not self.board[row][col].has_mine:
-                self.board[row][col].has_mine = MineCell
+            if not isinstance(self.board[row][col], MineCell):
+                self.board[row][col] = MineCell()
                 mines_placed += 1
 
 
@@ -50,7 +50,7 @@ class Minesweeper:
                 if (
                     0 <= neighbor_row < ROWS
                     and 0 <= neighbor_col < COLS
-                    and self.board[neighbor_row][neighbor_col].has_mine
+                    and isinstance(self.board[neighbor_row][neighbor_col], MineCell)
                 ):
                     mines_count += 1
 
@@ -59,25 +59,25 @@ class Minesweeper:
     def _count_neighbor_mines(self):
         for row in range(ROWS):
             for col in range(COLS):
-                if not self.board[row][col].has_mine:
+                if isinstance(self.board[row][col], EmptyCell):
                     self._assign_neighboring_mines_count(row, col)
 
     def reveal_cell(self, row, col):
         cell = self.board[row][col]
 
         if not cell.has_flag and not cell.is_revealed:
-            if cell.has_mine:
+            if isinstance(cell, MineCell):
                 self.game_over = True
                 self.reveal_all_mines()
             else:
-                self.reveal_empty_cells(row, col)
+                self._reveal_empty_cells(row, col)
 
     def flag_cell(self, row, col):
         cell = self.board[row][col]
         if not cell.is_revealed:
             cell.has_flag = not cell.has_flag
     
-    def reveal_empty_cells(self, row, col):
+    def _reveal_empty_cells(self, row, col):
         cell = self.board[row][col]
 
         if cell.is_revealed or cell.has_flag:
@@ -99,10 +99,10 @@ class Minesweeper:
                 neighbor_col = col + col_offset
 
                 if 0 <= neighbor_row < ROWS and 0 <= neighbor_col < COLS:
-                    self.reveal_empty_cells(neighbor_row, neighbor_col)
+                    self._reveal_empty_cells(neighbor_row, neighbor_col)
 
     def reveal_all_mines(self):
         for row in range(ROWS):
             for col in range(COLS):
-                if self.board[row][col].has_mine:
+                if isinstance(self.board[row][col], MineCell):
                     self.board[row][col].is_revealed = True
