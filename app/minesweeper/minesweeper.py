@@ -1,9 +1,11 @@
-from app.settings import ROWS, COLS, MINES_COUNT
+from app.settings import MINES_COUNT
 from app.minesweeper.cell import EmptyCell, MineCell
 from random import randint
 
 class Minesweeper:
-    def __init__(self):
+    def __init__(self, rows: int, cols: int):
+        self.rows = rows
+        self.cols = cols
         self.init_game()
 
     def init_game(self):
@@ -12,15 +14,15 @@ class Minesweeper:
         self.board = self._create_board()
         self._place_mines()
         self._count_neighbor_mines()
-        self.remaining = ROWS * COLS - MINES_COUNT
+        self.remaining = self.rows * self.cols - MINES_COUNT
 
     def _create_board(self):
         board = []
 
-        for row in range(ROWS):
+        for row in range(self.rows):
             row_list = []
 
-            for col in range(COLS):
+            for col in range(self.cols):
                 row_list.append(EmptyCell())
 
             board.append(row_list)
@@ -31,8 +33,8 @@ class Minesweeper:
         mines_placed = 0
         
         while mines_placed < MINES_COUNT:
-            row = randint(0, ROWS - 1)
-            col = randint(0, COLS - 1)
+            row = randint(0, self.rows - 1)
+            col = randint(0, self.cols - 1)
 
             if not isinstance(self.board[row][col], MineCell):
                 self.board[row][col] = MineCell()
@@ -48,8 +50,8 @@ class Minesweeper:
                 neighbor_col = col + col_offset
 
                 if (
-                    0 <= neighbor_row < ROWS
-                    and 0 <= neighbor_col < COLS
+                    0 <= neighbor_row < self.rows
+                    and 0 <= neighbor_col < self.cols
                     and isinstance(self.board[neighbor_row][neighbor_col], MineCell)
                 ):
                     mines_count += 1
@@ -57,8 +59,8 @@ class Minesweeper:
         self.board[row][col].neighbor_mines = mines_count
 
     def _count_neighbor_mines(self):
-        for row in range(ROWS):
-            for col in range(COLS):
+        for row in range(self.rows):
+            for col in range(self.cols):
                 if isinstance(self.board[row][col], EmptyCell):
                     self._assign_neighboring_mines_count(row, col)
 
@@ -98,11 +100,11 @@ class Minesweeper:
                 neighbor_row = row + row_offset
                 neighbor_col = col + col_offset
 
-                if 0 <= neighbor_row < ROWS and 0 <= neighbor_col < COLS:
+                if 0 <= neighbor_row < self.rows and 0 <= neighbor_col < self.cols:
                     self._reveal_empty_cells(neighbor_row, neighbor_col)
 
     def reveal_all_mines(self):
-        for row in range(ROWS):
-            for col in range(COLS):
+        for row in range(self.rows):
+            for col in range(self.cols):
                 if isinstance(self.board[row][col], MineCell):
                     self.board[row][col].is_revealed = True

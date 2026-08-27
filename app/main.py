@@ -1,6 +1,7 @@
+import uuid
 from fastapi import FastAPI, HTTPException
 from app.minesweeper.minesweeper import Minesweeper
-from app.model import GameState, CellState, CellRequest
+from app.model import GameState, CellState, CellRequest, GameInitRequest, GameRequest
 from app.minesweeper.cell import EmptyCell
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,22 +16,23 @@ app.add_middleware(
 )
 
 
-minesweeper = None
+minesweepers = {}
 
 @app.get("/")
 def root():
     return {"message": "Hello, Minesweeper!"}
 
 @app.post("/minesweeper/init")
-def init_game():
-    global minesweeper
-    minesweeper = Minesweeper()
-    return 
+def init_game(request: GameInitRequest):
+    session_id = uuid.uuid4()
+    minesweepers[str(session_id)] = Minesweeper(request.rows, request.cols)
+    return {"session_id": str(session_id)}
 
-@app.get("/minesweeper/state", response_model=GameState)
-def get_state():
-    if minesweeper is None:
+@app.get("/minesweeper/state/{session_id}", response_model=GameState)
+def get_state(session_id: str):
+    if not session_id in minesweepers:
         raise HTTPException(status_code=404, detail="The game has not been initialized.")
+    minesweeper = minesweepers[session_id]
     board = []
     for row in minesweeper.board:
         row_list = []
@@ -57,16 +59,16 @@ def get_state():
         remaining=minesweeper.remaining
     )
 
-@app.post("/minesweeper/reveal")
-def reveal_cell(request: CellRequest):
-    if minesweeper is None:
+@app.post("/minesweeper/reveal/{session_id}")
+def reveal_cell(request: CellRequest, session_id: str):
+    if not session_id in minesweepers:
         raise HTTPException(status_code=404, detail="The game has not been initialized.")
-    minesweeper.reveal_cell(request.row, request.col)
+    minesweepers[session_id].reveal_cell(request.row, request.col)
 
-@app.post("/minesweeper/flag")
-def flag_cell(request: CellRequest):
-    if minesweeper is None:
+@app.post("/minesweeper/flag/{session_id}")
+def flag_cell(request: CellRequest, session_id):
+    if not session_id in minesweepers:
         raise HTTPException(status_code=404, detail="The game has not been initialized.")
-    minesweeper.flag_cell(request.row, request.col)
+    minesweepers[session_id].flag_cell(request.row, request.col)
 
 

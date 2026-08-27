@@ -21,18 +21,49 @@
             margin-bottom: 10px;
         }
 
+        #setup-container {
+            margin-bottom: 15px;
+            background: #ffffff;
+            padding: 15px 20px;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 250px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 3px;
+            color: #444;
+        }
+
+        .input-group input {
+            padding: 6px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+
         #game-container {
             background-color: #c0c0c0;
             padding: 15px;
             border: 4px solid;
             border-color: #ffffff #808080 #808080 #ffffff;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            display: none; /* Ukryte do momentu inicjalizacji gry */
         }
 
         #board {
             display: grid;
-            grid-template-columns: repeat(10, 35px);
-            grid-template-rows: repeat(10, 35px);
             gap: 2px;
             background-color: #808080;
             border: 2px solid;
@@ -89,7 +120,7 @@
         }
 
         button:active {
-            border-color: #808080 #ffffff #ffffff #808080;
+            border-color: #808080 #ffffff #ffffff #ffffff;
         }
 
         #status {
@@ -102,30 +133,62 @@
 <body>
 
     <h1>Saper</h1>
+
+    <!-- Panel sterowania nową grą -->
+    <div id="setup-container">
+        <div class="input-group">
+            <label for="playerName">Nazwa gracza:</label>
+            <input type="text" id="playerName" value="Gracz">
+        </div>
+        <div class="input-group">
+            <label for="rowsInput">Wiersze:</label>
+            <input type="number" id="rowsInput" value="10" min="5" max="30">
+        </div>
+        <div class="input-group">
+            <label for="colsInput">Kolumny:</label>
+            <input type="number" id="colsInput" value="10" min="5" max="30">
+        </div>
+        <button onclick="initGame()">Nowa Gra (Init)</button>
+    </div>
     
     <div id="game-container">
         <div id="board"></div>
     </div>
 
     <div id="controls">
-        <button onclick="initGame()">Nowa Gra (Init)</button>
-        <div id="status">Ładowanie gry...</div>
+        <div id="status">Wprowadź dane i kliknij "Nowa Gra".</div>
     </div>
 
     <script>
         const API_BASE = 'http://127.0.0.1:8000/minesweeper';
+        
+        let currentSessionId = null;
 
         async function initGame() {
             try {
                 document.getElementById('status').innerText = 'Inicjalizowanie gry...';
+                
+                const name = document.getElementById('playerName').value;
+                const rows = parseInt(document.getElementById('rowsInput').value);
+                const cols = parseInt(document.getElementById('colsInput').value);
+                
+                // Endpoint /init przyjmuje GameInitRequest (rows, cols, name)
                 const response = await fetch(`${API_BASE}/init`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rows, cols, name })
                 });
                 
                 if (!response.ok) {
                     throw new Error('Błąd podczas inicjalizacji gry');
                 }
                 
+                // Backend zwraca słownik z polem session_id
+                const data = await response.json();
+                currentSessionId = data.session_id;
+                
+                // Pokaż planszę gry
+                document.getElementById('game-container').style.display = 'block';
                 await fetchGameState();
             } catch (error) {
                 console.error(error);
@@ -134,8 +197,11 @@
         }
 
         async function fetchGameState() {
+            if (!currentSessionId) return;
+
             try {
-                const response = await fetch(`${API_BASE}/state`);
+                const response = await fetch(`${API_BASE}/state/${encodeURIComponent(currentSessionId)}`);
+                
                 if (!response.ok) {
                     throw new Error('Błąd pobierania stanu gry');
                 }
@@ -146,7 +212,7 @@
                 if (data.game_over) {
                     document.getElementById('status').innerText = data.game_win ? 'Wygrana! 🎉' : 'Przegrana! 💥';
                 } else {
-                    document.getElementById('status').innerText = `Gra w toku... Pozostało min: ${data.remaining}`;
+                    document.getElementById('status').innerText = `Gra w toku... Pozostało do odkrycia: ${data.remaining}`;
                 }
             } catch (error) {
                 console.error(error);
@@ -155,8 +221,10 @@
         }
 
         async function revealCell(row, col) {
+            if (!currentSessionId) return;
+
             try {
-                const response = await fetch(`${API_BASE}/reveal`, {
+                const response = await fetch(`${API_BASE}/reveal/${encodeURIComponent(currentSessionId)}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ row: row, col: col })
@@ -169,10 +237,11 @@
             }
         }
 
-        // Nowa funkcja obsługująca flagowanie komórki
         async function flagCell(row, col) {
+            if (!currentSessionId) return;
+
             try {
-                const response = await fetch(`${API_BASE}/flag`, {
+                const response = await fetch(`${API_BASE}/flag/${encodeURIComponent(currentSessionId)}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ row: row, col: col })
@@ -189,34 +258,35 @@
             const boardElement = document.getElementById('board');
             boardElement.innerHTML = '';
 
+            const rowsCount = boardData.length;
+            const colsCount = boardData[0].length;
+            boardElement.style.gridTemplateColumns = `repeat(${colsCount}, 35px)`;
+            boardElement.style.gridTemplateRows = `repeat(${rowsCount}, 35px)`;
+
             boardData.forEach((row, rowIndex) => {
                 row.forEach((cell, colIndex) => {
                     const cellDiv = document.createElement('div');
                     cellDiv.classList.add('cell');
 
-                    // Lewy przycisk myszy - odkrywanie komórki
                     cellDiv.addEventListener('click', () => {
                         revealCell(rowIndex, colIndex);
                     });
 
-                    // Prawy przycisk myszy - flagowanie komórki
                     cellDiv.addEventListener('contextmenu', (e) => {
-                        e.preventDefault(); // Blokuje domyślne menu kontekstowe przeglądarki
+                        e.preventDefault(); 
                         flagCell(rowIndex, colIndex);
                     });
 
-                    // Wyświetlanie stanu komórki
                     if (cell.is_revealed) {
                         cellDiv.classList.add('revealed');
                         if (cell.is_mine) {
                             cellDiv.classList.add('mine');
                             cellDiv.innerText = '💣';
-                        } else if (cell.neighbor_mines > 0) {
+                        } else if (cell.neighbor_mines !== null && cell.neighbor_mines > 0) {
                             cellDiv.innerText = cell.neighbor_mines;
                             cellDiv.classList.add(`c-${cell.neighbor_mines}`);
                         }
                     } else if (cell.has_flag) {
-                        // Jeśli komórka ma flagę, wyświetlamy ikonę i nie odkrywamy jej
                         cellDiv.innerText = '🚩';
                     }
 
@@ -224,9 +294,6 @@
                 });
             });
         }
-
-        // Uruchomienie przy załadowaniu strony
-        initGame();
     </script>
 </body>
 </html>

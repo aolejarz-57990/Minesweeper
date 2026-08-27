@@ -17,3 +17,10 @@ class CellRequest(BaseModel):
     row: int
     col: int
 
+class GameInitRequest(BaseModel):
+    rows: int
+    cols: int
+    name: str
+
+class GameRequest(BaseModel):
+    name: str
