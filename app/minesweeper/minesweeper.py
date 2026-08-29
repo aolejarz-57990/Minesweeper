@@ -6,7 +6,9 @@ class Minesweeper:
     def __init__(self, rows: int, cols: int):
         self.rows = rows
         self.cols = cols
+
         self.init_game()
+
 
     def init_game(self):
         self.game_over = False
